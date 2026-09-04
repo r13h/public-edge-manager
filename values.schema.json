@@ -3,6 +3,13 @@
   "type": "object",
   "properties": {
     "enabled": { "type": "boolean" },
+    "api": {
+      "type": "object",
+      "required": ["group"],
+      "properties": {
+        "group": { "type": "string", "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)+$" }
+      }
+    },
     "nameservers": {
       "type": "array",
       "items": { "type": "string", "minLength": 1 }
@@ -10,6 +17,28 @@
     "authorityNodes": { "type": "object" },
     "services": { "type": "object" },
     "publicEdges": { "type": "array" },
+    "dns": {
+      "type": "object",
+      "required": ["soaRname"],
+      "properties": { "soaRname": { "type": "string", "pattern": "\\.$" } }
+    },
+    "probe": {
+      "type": "object",
+      "properties": {
+        "connectTimeoutSeconds": { "type": "number", "exclusiveMinimum": 0 },
+        "responseTimeoutSeconds": { "type": "number", "exclusiveMinimum": 0 },
+        "intervalSeconds": { "type": "integer", "minimum": 1 },
+        "userAgent": { "type": "string", "minLength": 1 }
+      }
+    },
+    "publication": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "publisherNode": { "type": "string" },
+        "refs": { "type": "object" }
+      }
+    },
     "rbac": {
       "type": "object",
       "properties": { "mutateIngresses": { "type": "boolean" } }
@@ -20,7 +49,8 @@
         "type": { "enum": ["ClusterIP", "NodePort", "LoadBalancer"] },
         "externalTrafficPolicy": { "enum": ["", "Cluster", "Local"] }
       }
-    }
+    },
+    "candidateSelection": { "type": "object" }
   },
   "allOf": [
     {
@@ -31,6 +61,28 @@
           "authorityNodes": { "minProperties": 1 },
           "services": { "minProperties": 1 },
           "publicEdges": { "minItems": 1 }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "publication": {
+            "properties": { "enabled": { "const": true } }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "publication": {
+            "properties": {
+              "publisherNode": { "minLength": 1 },
+              "refs": { "minProperties": 1 }
+            }
+          },
+          "rbac": {
+            "properties": { "mutateIngresses": { "const": true } }
+          }
         }
       }
     }

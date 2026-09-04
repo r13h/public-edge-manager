@@ -1,42 +1,79 @@
 # Public Edge Manager
 
-This chart packages the `PublicEdge` inventory, health authority and DNS answer
-service as one application. It does not write Cloudflare records directly.
-ExternalDNS remains the publication executor for NS/glue ownership, while this
-authority answers delegated service names from live `PublicEdge` health.
-For names that are not yet delegated, one elected manager patches a single
-ExternalDNS-only Ingress with the healthy default-area target. Application
-HTTPRoute/TLSRoute objects must not also carry ExternalDNS eligibility.
+Public Edge Manager is an open-source Kubernetes controller and authoritative
+DNS service for selecting healthy public ingress edges by locality, capacity,
+priority, and observed application latency. It is application- and DNS-provider
+agnostic: operators supply their own zones, services, nodes, endpoints, Gateway
+VIPs, and publication integration.
 
-Selection is deterministic:
+The repository is the complete build context. It contains the controller source,
+tests, container definition, Helm chart, license, and CI/release workflows. It
+does not require code or ConfigMaps from a separate private repository.
 
-1. unhealthy, disabled and draining edges are excluded;
-2. a healthy edge in the querying NS replica's coarse `area` (CN/US/EU/APAC)
-   always beats a remote edge;
-3. inside an area, `capacityMbps` is the dominant score, followed by explicit
-   priority and measured application latency;
-4. a `RegionalRelay` publishes its local public endpoint but forwards traffic
-   to the declared origin area/Gateway VIP.
+## How it works
 
-The chart ships without organization-specific nameservers, nodes, services or
-edges. Supply them in your own values file; `examples/values-re8ch.yaml` shows
-the configuration that was previously embedded in the chart defaults.
-Set `enabled=true` after providing that inventory. The explicit opt-in prevents
-an empty release from binding DNS port 53 on every node.
+1. Disabled, draining, and unhealthy edges are excluded.
+2. A healthy edge in the authority replica's configured area beats a remote edge.
+3. Capacity, priority, application latency, and a small node-local preference
+   provide deterministic ordering inside an area.
+4. DNS A or CNAME answers publish the best equally scored candidates.
+5. An optional legacy mode updates explicitly named ExternalDNS-only Ingresses.
 
-## Security defaults
+Public Edge Manager does not configure routers, NAT, BGP, certificates, or
+application Gateways. Those remain explicit operator-owned infrastructure.
 
-The manager receives read-only access to Ingress objects by default. Set
-`rbac.mutateIngresses=true` only when using the legacy publication mode that
-patches an ExternalDNS-only Ingress. Delegated authoritative DNS does not need
-that permission.
+## Install
 
-The DNS Service exposes both TCP and UDP port 53 in addition to the health API.
-Its type, annotations and external traffic policy are configurable.
+Start from [`examples/values-example.yaml`](examples/values-example.yaml), replace
+all documentation addresses and names, then install the OCI chart:
 
-## Container image and licensing
+```sh
+helm install public-edge-manager \
+  oci://ghcr.io/re8ch/charts/public-edge-manager \
+  --version 0.3.0 \
+  --namespace public-edge-system --create-namespace \
+  --values values-production.yaml
+```
 
-The current default image is hosted at `registry.re8ch.com`. Operators should
-pin `image.digest` and verify that their cluster can pull it before installing.
-The controller source and a repository-level license file should be published
-before third parties treat this chart as a supply-chain-verifiable release.
+The chart defaults to `enabled: false`; enabling it requires at least one
+nameserver, authority node, service, and edge. `api.group` is configurable for
+organizations that own a Kubernetes API group. Existing installations can keep
+`networking.re8ch.com` for API compatibility without using any RE8CH service
+domain or infrastructure.
+
+## Exposure and security model
+
+The chart creates two Services:
+
+- `public-edge-manager-dns` carries only authoritative UDP/TCP 53 and may be
+  configured as `LoadBalancer`.
+- `public-edge-manager` is always `ClusterIP` and carries the health/discovery
+  HTTP API on port 8080.
+
+Ingress mutation is disabled by default. Enable `publication.enabled` and
+`rbac.mutateIngresses` together only for the legacy ExternalDNS publication
+mode. Normal delegated authoritative DNS requires read-only Ingress access.
+
+The controller runs as UID/GID 65532 with a read-only root filesystem, no
+privilege escalation, and only `NET_BIND_SERVICE`. Never put credentials or
+private topology in chart defaults.
+
+## Artifact verification
+
+Tagged releases publish multi-architecture images and OCI Helm charts to GHCR.
+Images include GitHub provenance and SBOM attestations and are signed keylessly
+with Sigstore. Pin the resolved image digest in production:
+
+```sh
+cosign verify \
+  --certificate-identity-regexp '^https://github.com/re8ch/public-edge-manager/' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+  ghcr.io/re8ch/public-edge-manager@sha256:...
+```
+
+See [`SECURITY.md`](SECURITY.md) for vulnerability reporting and
+[`CONTRIBUTING.md`](CONTRIBUTING.md) for validation requirements.
+
+## License
+
+Apache License 2.0. See [`LICENSE`](LICENSE).

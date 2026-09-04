@@ -1,6 +1,6 @@
 image:
-  repository: registry.re8ch.com/platform/regional-routing-authority
-  tag: "0.1.0"
+  repository: ghcr.io/re8ch/public-edge-manager
+  tag: "0.3.0"
   digest: ""
   pullPolicy: IfNotPresent
 
@@ -10,6 +10,9 @@ enabled: false
 
 crd:
   install: true
+
+api:
+  group: networking.re8ch.com
 
 nameservers: []
 authorityNodes: {}
@@ -24,6 +27,19 @@ workload:
 probe:
   connectTimeoutSeconds: 5
   responseTimeoutSeconds: 12
+  intervalSeconds: 3
+  userAgent: public-edge-manager/0.3
+
+dns:
+  soaRname: hostmaster.invalid.
+
+candidateSelection:
+  capacityWeight: 10
+  localAreaBonus: 100000
+  priorityWeight: 1
+  latencyDivisorMs: 20
+  latencyPenaltyCap: 50
+  localNodeBonus: 5
 
 publication:
   enabled: false

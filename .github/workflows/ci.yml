@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Unit tests
+        run: |
+          python -m compileall -q src tests
+          PYTHONPATH=src python -m unittest discover -s tests -v
+      - name: Reject private deployment data
+        run: |
+          if grep -R -n -E '223\.159\.210\.222|10\.181\.22\.|registry\.re8ch\.com' --exclude-dir=.git .; then
+            echo 'private deployment data must stay outside public product defaults'
+            exit 1
+          fi
+      - uses: azure/setup-helm@v4
+      - name: Validate Helm chart
+        run: |
+          helm lint .
+          helm lint . -f examples/values-example.yaml
+          helm template public-edge-manager . -f examples/values-example.yaml >/dev/null
+      - name: Build container
+        run: docker build --build-arg VERSION=ci .

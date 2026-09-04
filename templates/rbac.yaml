@@ -7,10 +7,10 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata: {name: {{ include "public-edge-manager.name" . }}}
 rules:
-  - apiGroups: [networking.re8ch.com]
+  - apiGroups: [{{ .Values.api.group | quote }}]
     resources: [publicedges]
     verbs: [get, list, watch]
-  - apiGroups: [networking.re8ch.com]
+  - apiGroups: [{{ .Values.api.group | quote }}]
     resources: [publicedges/status]
     verbs: [get, patch, update]
   - apiGroups: [gateway.networking.k8s.io]
