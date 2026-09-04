@@ -30,7 +30,7 @@ all documentation addresses and names, then install the OCI chart:
 ```sh
 helm install public-edge-manager \
   oci://ghcr.io/re8ch/charts/public-edge-manager \
-  --version 0.3.0 \
+  --version 0.3.1 \
   --namespace public-edge-system --create-namespace \
   --values values-production.yaml
 ```
@@ -53,6 +53,11 @@ The chart creates two Services:
 Ingress mutation is disabled by default. Enable `publication.enabled` and
 `rbac.mutateIngresses` together only for the legacy ExternalDNS publication
 mode. Normal delegated authoritative DNS requires read-only Ingress access.
+
+`readinessGates` can fail a sensitive service closed unless JSON authority
+evidence in a ConfigMap agrees with the ready addresses of an EndpointSlice.
+The mechanism is generic and opt-in; database product names and resource names
+remain solely in deployment values.
 
 The controller runs as UID/GID 65532 with a read-only root filesystem, no
 privilege escalation, and only `NET_BIND_SERVICE`. Never put credentials or

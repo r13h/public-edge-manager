@@ -35,6 +35,7 @@ SERVICE_ACCOUNT = "/var/run/secrets/kubernetes.io/serviceaccount"
 PUBLISHER_NODE = os.getenv("PUBLISHER_NODE", "")
 PUBLICATION_REFS = json.loads(os.getenv("PUBLICATION_REFS_JSON", "{}"))
 PUBLICATION_ENABLED = os.getenv("PUBLICATION_ENABLED", "false").lower() == "true"
+READINESS_GATES = json.loads(os.getenv("READINESS_GATES_JSON", "{}"))
 SOA_RNAME = os.getenv("SOA_RNAME", "hostmaster.invalid.")
 USER_AGENT = os.getenv("PROBE_USER_AGENT", "public-edge-manager/0.3")
 CANDIDATE_CAPACITY_WEIGHT = max(0, int(os.getenv("CANDIDATE_CAPACITY_WEIGHT", "10")))
@@ -74,6 +75,40 @@ def kubernetes_patch(path, payload):
     )
     with urllib.request.urlopen(request, context=context, timeout=5) as response:
         return json.load(response)
+
+
+def readiness_gate_ready(service):
+    """Evaluate an optional, deployment-defined authority gate for a service."""
+    gate = READINESS_GATES.get(service)
+    if not gate:
+        return True
+    try:
+        config = gate["configMap"]
+        endpoint_ref = gate["endpointSlice"]
+        config_map = kubernetes_get(
+            f"/api/v1/namespaces/{config['namespace']}/configmaps/{config['name']}"
+        )
+        endpoint_slice = kubernetes_get(
+            f"/apis/discovery.k8s.io/v1/namespaces/{endpoint_ref['namespace']}"
+            f"/endpointslices/{endpoint_ref['name']}"
+        )
+        document = json.loads(config_map["data"][config["dataKey"]])
+        if any(document.get(key) != value for key, value in gate.get("requiredFields", {}).items()):
+            return False
+        selected = document
+        for key in gate["addressPath"]:
+            selected = selected[key]
+        ready_addresses = [
+            address
+            for endpoint in endpoint_slice.get("endpoints", [])
+            if endpoint.get("conditions", {}).get("ready", True)
+            for address in endpoint.get("addresses", [])
+        ]
+        if gate.get("requireSingleReadyAddress", True) and len(ready_addresses) != 1:
+            return False
+        return selected in ready_addresses
+    except (KeyError, TypeError, ValueError):
+        return False
 
 
 def candidates_from_public_edges():
@@ -278,6 +313,7 @@ def publish_default_area():
 
 
 def ranked(service):
+    gate_ready = readiness_gate_ready(service)
     with LOCK:
         snapshot = dict(HEALTH.get(service, {}))
     result = []
@@ -287,7 +323,7 @@ def ranked(service):
         if service not in candidate.get("probes", {}):
             continue
         observed = snapshot.get(candidate["id"], {})
-        ready = bool(observed.get("ready"))
+        ready = bool(observed.get("ready")) and gate_ready
         score = 0
         if ready:
             regional_priority = candidate.get("priorityByRegion", {}).get(REGION, candidate.get("priority", 0))
@@ -313,7 +349,7 @@ def ranked(service):
             "score": score, "state": "ready" if ready else "unavailable",
             "statusCode": observed.get("statusCode", 0), "latencyMs": observed.get("latencyMs", 0),
             "observedAt": observed.get("observedAt", 0),
-            "reason": observed.get("failure", ""),
+            "reason": observed.get("failure", "") if gate_ready else "configured readiness gate is not satisfied",
         })
     return sorted(result, key=lambda item: (-item["score"], item["id"]))
 

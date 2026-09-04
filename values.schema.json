@@ -17,6 +17,7 @@
     "authorityNodes": { "type": "object" },
     "services": { "type": "object" },
     "publicEdges": { "type": "array" },
+    "readinessGates": { "type": "object" },
     "dns": {
       "type": "object",
       "required": ["soaRname"],
