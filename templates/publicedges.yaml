@@ -1,5 +1,6 @@
+{{- if .Values.enabled }}
 {{- range .Values.publicEdges }}
-apiVersion: networking.re8ch.com/v1alpha1
+apiVersion: {{ $.Values.api.group }}/v1alpha1
 kind: PublicEdge
 metadata: {name: {{ .name }}}
 spec:
@@ -17,4 +18,5 @@ spec:
   serviceClasses: {{ .serviceClasses | toJson }}
   forwarding: {{ .forwarding | toYaml | nindent 4 }}
 ---
+{{- end }}
 {{- end }}

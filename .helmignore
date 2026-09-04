@@ -1,0 +1,14 @@
+.git/
+.github/
+.dockerignore
+.helmignore
+Dockerfile
+CONTRIBUTING.md
+SECURITY.md
+pyproject.toml
+src/
+tests/
+docs/
+*.tgz
+__pycache__/
+*.pyc

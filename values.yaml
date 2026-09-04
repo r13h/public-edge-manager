@@ -1,71 +1,58 @@
 image:
-  repository: registry.re8ch.com/platform/regional-routing-authority
-  tag: "0.1.0"
+  repository: ghcr.io/re8ch/public-edge-manager
+  tag: "0.3.0"
   digest: ""
   pullPolicy: IfNotPresent
+
+# Explicit opt-in prevents an unconfigured release from binding DNS port 53 on
+# every cluster node.
+enabled: false
 
 crd:
   install: true
 
-nameservers: [ns-sh.re8ch.com., ns-gz.re8ch.com., ns-us.re8ch.com.]
-authorityNodes:
-  a1-wsl-zt: {bindAddress: 10.181.22.147, area: CN, region: loudi}
-  b1-wsl-zt: {bindAddress: 10.181.22.125, area: CN, region: loudi}
-  domain-ex: {bindAddress: 10.0.0.5, area: CN, region: shanghai}
-  vm-20-12-ubuntu: {bindAddress: 10.1.20.12, area: CN, region: guangzhou}
-  overseas-la: {bindAddress: 179.255.126.104, area: US, region: los-angeles}
+api:
+  group: networking.re8ch.com
 
-services:
-  api.re8ch.com.: {service: api, class: api, probePath: /__edge/ready}
-  db-ro.re8ch.com.: {service: db-ro, class: db-ro, probePath: /auth/}
-  db-rw.re8ch.com.: {service: db-rw, class: db-rw, probePath: /auth/}
-  registry.re8ch.com.: {service: registry, class: registry, probePath: /v2/}
-  headlamp.re8ch.com.: {service: headlamp, class: web, probePath: /}
-  grafana.re8ch.com.: {service: grafana, class: web, probePath: /grafana/api/health}
-  dex.re8ch.com.: {service: dex, class: web, probePath: /.well-known/openid-configuration}
-  litellm.re8ch.com.: {service: litellm, class: web, probePath: /health/readiness}
-  cube.re8ch.com.: {service: cube, class: web, probePath: /}
-  dbgui.re8ch.com.: {service: dbgui, class: web, probePath: /}
-  browser.re8ch.com.: {service: browser, class: web, probePath: /}
+nameservers: []
+authorityNodes: {}
+services: {}
+publicEdges: []
 
-publicEdges:
-  - name: guangzhou-zan
-    area: CN
-    region: guangzhou
-    nodeName: zan
-    endpoint: {type: PublicIP, value: 1.14.174.244}
-    gatewayVIP: 10.251.0.6
-    capacityMbps: 100
-    priority: 10
-    serviceClasses: [api, db-ro, db-rw, web, registry]
-    forwarding: {mode: DirectGateway}
-  - name: loudi-r640
-    area: CN
-    region: loudi
-    nodeName: r640
-    endpoint: {type: PublicIP, value: 223.159.210.222}
-    gatewayVIP: 10.251.0.4
-    capacityMbps: 1000
-    priority: -30
-    serviceClasses: [api, db-ro, db-rw, web, registry]
-    forwarding: {mode: DirectGateway}
+workload:
+  hostNetwork: true
+  priorityClassName: ""
+  tolerations: []
 
 probe:
   connectTimeoutSeconds: 5
   responseTimeoutSeconds: 12
+  intervalSeconds: 3
+  userAgent: public-edge-manager/0.3
+
+dns:
+  soaRname: hostmaster.invalid.
+
+candidateSelection:
+  capacityWeight: 10
+  localAreaBonus: 100000
+  priorityWeight: 1
+  latencyDivisorMs: 20
+  latencyPenaltyCap: 50
+  localNodeBonus: 5
 
 publication:
-  # Cloudflare A records are global. The elected CN authority publishes the
-  # default answer; region-aware names should be delegated to the NS service.
-  publisherNode: vm-20-12-ubuntu
-  refs:
-    registry: {namespace: qianwen-ops, name: static-cilium-edge-services-dns}
-    headlamp: {namespace: headlamp, name: headlamp-dns-authority}
-    grafana: {namespace: qianwen-ops, name: grafana-dns-authority}
-    dex: {namespace: dex, name: dex-dns-authority}
-    litellm: {namespace: llm-gateway, name: litellm-dns-authority}
-    cube: {namespace: cube-trial, name: cube-dns-authority}
-    dbgui: {namespace: ops, name: cloudbeaver-dns-authority}
+  enabled: false
+  publisherNode: ""
+  refs: {}
+
+rbac:
+  mutateIngresses: false
+
+service:
+  type: ClusterIP
+  annotations: {}
+  externalTrafficPolicy: ""
 
 resources:
   requests: {cpu: 20m, memory: 32Mi}
