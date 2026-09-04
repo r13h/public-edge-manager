@@ -136,6 +136,39 @@ class AuthorityTests(unittest.TestCase):
             "/apis/networking.example.org/v1alpha1/publicedges/edge-a/status",
         )
 
+    def test_readiness_gate_matches_selected_ready_address(self):
+        gate = {
+            "app": {
+                "configMap": {"namespace": "system", "name": "authority", "dataKey": "authority.json"},
+                "requiredFields": {"source": "election"},
+                "addressPath": ["leader", "address"],
+                "endpointSlice": {"namespace": "backend", "name": "primary"},
+            }
+        }
+        responses = [
+            {"data": {"authority.json": '{"source":"election","leader":{"address":"10.0.0.8"}}'}},
+            {"endpoints": [{"conditions": {"ready": True}, "addresses": ["10.0.0.8"]}]},
+        ]
+        with mock.patch.object(authority, "READINESS_GATES", gate), \
+             mock.patch.object(authority, "kubernetes_get", side_effect=responses):
+            self.assertTrue(authority.readiness_gate_ready("app"))
+
+    def test_readiness_gate_fails_closed_on_conflicting_evidence(self):
+        gate = {
+            "app": {
+                "configMap": {"namespace": "system", "name": "authority", "dataKey": "authority.json"},
+                "addressPath": ["leader", "address"],
+                "endpointSlice": {"namespace": "backend", "name": "primary"},
+            }
+        }
+        responses = [
+            {"data": {"authority.json": '{"leader":{"address":"10.0.0.8"}}'}},
+            {"endpoints": [{"conditions": {"ready": True}, "addresses": ["10.0.0.9"]}]},
+        ]
+        with mock.patch.object(authority, "READINESS_GATES", gate), \
+             mock.patch.object(authority, "kubernetes_get", side_effect=responses):
+            self.assertFalse(authority.readiness_gate_ready("app"))
+
 
 if __name__ == "__main__":
     unittest.main()
