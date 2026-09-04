@@ -18,7 +18,25 @@ Selection is deterministic:
 4. a `RegionalRelay` publishes its local public endpoint but forwards traffic
    to the declared origin area/Gateway VIP.
 
-For the default CN inventory this makes R640 (1000 Mbps) the preferred A answer
-for `registry.re8ch.com` and control panels once its 443/TLS/application probes
-are healthy. A US authority instead selects a healthy US relay and leaves the
-CN origin behind that relay.
+The chart ships without organization-specific nameservers, nodes, services or
+edges. Supply them in your own values file; `examples/values-re8ch.yaml` shows
+the configuration that was previously embedded in the chart defaults.
+Set `enabled=true` after providing that inventory. The explicit opt-in prevents
+an empty release from binding DNS port 53 on every node.
+
+## Security defaults
+
+The manager receives read-only access to Ingress objects by default. Set
+`rbac.mutateIngresses=true` only when using the legacy publication mode that
+patches an ExternalDNS-only Ingress. Delegated authoritative DNS does not need
+that permission.
+
+The DNS Service exposes both TCP and UDP port 53 in addition to the health API.
+Its type, annotations and external traffic policy are configurable.
+
+## Container image and licensing
+
+The current default image is hosted at `registry.re8ch.com`. Operators should
+pin `image.digest` and verify that their cluster can pull it before installing.
+The controller source and a repository-level license file should be published
+before third parties treat this chart as a supply-chain-verifiable release.
