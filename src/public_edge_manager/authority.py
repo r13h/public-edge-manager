@@ -130,7 +130,8 @@ def candidates_from_public_edges():
             service_class = definition.get("class", "web")
             if service_class not in service_classes:
                 continue
-            probes[service] = f"https://{hostname.rstrip('.')}{definition.get('probePath', '/')}"
+            probe_hostname = definition.get("probeHostname", hostname).rstrip(".")
+            probes[service] = f"https://{probe_hostname}{definition.get('probePath', '/')}"
         candidates.append({
             "id": item["metadata"]["name"],
             "nodeName": spec.get("nodeName", ""),

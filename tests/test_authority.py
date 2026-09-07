@@ -48,6 +48,26 @@ class AuthorityTests(unittest.TestCase):
             authority.kubernetes_get = original
         self.assertEqual(candidates[0]["probes"]["app"], "https://app.example.com/healthz")
 
+    def test_public_edge_can_probe_a_different_tls_hostname(self):
+        authority.SERVICE_DEFINITIONS = {
+            "exit.edge.example.com.": {
+                "service": "exit", "class": "web", "probePath": "/healthz",
+                "probeHostname": "app.example.com",
+            }
+        }
+        payload = {"items": [{
+            "metadata": {"name": "edge-a"},
+            "spec": {
+                "enabled": True, "draining": False, "region": "test",
+                "gatewayVIP": "10.0.0.10",
+                "endpoint": {"type": "PublicIP", "value": "192.0.2.10"},
+                "serviceClasses": ["web"],
+            },
+        }]}
+        with mock.patch.object(authority, "kubernetes_get", return_value=payload):
+            candidates = authority.candidates_from_public_edges()
+        self.assertEqual(candidates[0]["probes"]["exit"], "https://app.example.com/healthz")
+
     def test_dns_fails_closed_without_ready_edge(self):
         query = b"\x12\x34\x01\x00\x00\x01\x00\x00\x00\x00\x00\x00" + authority.encode_name("app.example.com.") + struct.pack("!HH", 1, 1)
         response = authority.dns_response(query)

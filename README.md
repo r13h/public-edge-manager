@@ -23,6 +23,11 @@ does not require code or ConfigMaps from a separate private repository.
 Public Edge Manager does not configure routers, NAT, BGP, certificates, or
 application Gateways. Those remain explicit operator-owned infrastructure.
 
+When an authoritative service name is not itself an HTTPS virtual host, set
+`probeHostname` on that service to a certificate-valid application hostname.
+The DNS answer keeps the original service name while health checks use the
+separate hostname for TLS SNI and the HTTP Host header.
+
 ## Install
 
 Start from [`examples/values-example.yaml`](examples/values-example.yaml), replace
@@ -31,7 +36,7 @@ all documentation addresses and names, then install the OCI chart:
 ```sh
 helm install public-edge-manager \
   oci://ghcr.io/r13h/charts/public-edge-manager \
-  --version 0.4.0 \
+  --version 0.4.1 \
   --namespace public-edge-system --create-namespace \
   --values values-production.yaml
 ```
