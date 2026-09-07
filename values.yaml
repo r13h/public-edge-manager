@@ -1,6 +1,6 @@
 image:
   repository: ghcr.io/r13h/public-edge-manager
-  tag: "0.4.0"
+  tag: "0.4.1"
   digest: ""
   pullPolicy: IfNotPresent
 
