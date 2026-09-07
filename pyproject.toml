@@ -4,12 +4,12 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "public-edge-manager"
-version = "0.3.1"
+version = "0.4.0"
 description = "Region- and capacity-aware public edge health and DNS authority for Kubernetes"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "Apache-2.0"
-authors = [{name = "RE8CH Platform"}]
+authors = [{name = "r13h"}]
 classifiers = [
   "Development Status :: 3 - Alpha",
   "License :: OSI Approved :: Apache Software License",
