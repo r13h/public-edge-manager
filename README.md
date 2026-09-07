@@ -30,8 +30,8 @@ all documentation addresses and names, then install the OCI chart:
 
 ```sh
 helm install public-edge-manager \
-  oci://ghcr.io/re8ch/charts/public-edge-manager \
-  --version 0.3.1 \
+  oci://ghcr.io/r13h/charts/public-edge-manager \
+  --version 0.4.0 \
   --namespace public-edge-system --create-namespace \
   --values values-production.yaml
 ```
@@ -109,9 +109,9 @@ with Sigstore. Pin the resolved image digest in production:
 
 ```sh
 cosign verify \
-  --certificate-identity-regexp '^https://github.com/re8ch/public-edge-manager/' \
+  --certificate-identity-regexp '^https://github.com/r13h/public-edge-manager/' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com \
-  ghcr.io/re8ch/public-edge-manager@sha256:...
+  ghcr.io/r13h/public-edge-manager@sha256:...
 ```
 
 See [`SECURITY.md`](SECURITY.md) for vulnerability reporting and
