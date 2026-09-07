@@ -13,6 +13,12 @@ crd:
 
 nameservers: []
 authorityNodes: {}
+# Preferred multi-domain API. Each entry is converted to the controller's
+# service inventory and optional ExternalDNS publication reference.
+domains: []
+
+# Legacy map retained for backwards compatibility. New installations should
+# use domains instead.
 services: {}
 publicEdges: []
 

@@ -24,6 +24,36 @@ the configuration that was previously embedded in the chart defaults.
 Set `enabled=true` after providing that inventory. The explicit opt-in prevents
 an empty release from binding DNS port 53 on every node.
 
+## Multi-domain publication
+
+New installations should declare public names through `domains`. A domain
+entry keeps the hostname, health-probe metadata and optional ExternalDNS-only
+Ingress reference together, avoiding separate maps that can silently drift:
+
+```yaml
+domains:
+  - hostname: app.example.com.
+    service: app
+    class: web
+    probePath: /healthz
+    publicationRef:
+      namespace: app
+      name: app-public-dns
+  - hostname: registry.example.net.
+    service: registry
+    class: registry
+    probePath: /v2/
+```
+
+Any number of unrelated DNS zones can be listed. The chart converts these
+entries to the controller's legacy `SERVICES_JSON` and
+`PUBLICATION_REFS_JSON` contracts. Existing `services` and `publication.refs`
+values remain supported; configuring the same hostname or service reference in
+both APIs fails Helm rendering instead of choosing one implicitly.
+
+See `examples/values-gzsj.yaml` for a non-production s1 example that uses an
+`sslip.io` hostname and does not modify production DNS.
+
 ## Security defaults
 
 The manager receives read-only access to Ingress objects by default. Set

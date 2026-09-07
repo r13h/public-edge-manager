@@ -8,6 +8,29 @@
       "items": { "type": "string", "minLength": 1 }
     },
     "authorityNodes": { "type": "object" },
+    "domains": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["hostname", "service", "class", "probePath"],
+        "properties": {
+          "hostname": { "type": "string", "minLength": 3 },
+          "service": { "type": "string", "minLength": 1 },
+          "class": { "type": "string", "minLength": 1 },
+          "probePath": { "type": "string", "pattern": "^/" },
+          "publicationRef": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["namespace", "name"],
+            "properties": {
+              "namespace": { "type": "string", "minLength": 1 },
+              "name": { "type": "string", "minLength": 1 }
+            }
+          }
+        }
+      }
+    },
     "services": { "type": "object" },
     "publicEdges": { "type": "array" },
     "rbac": {
@@ -29,9 +52,12 @@
         "properties": {
           "nameservers": { "minItems": 1 },
           "authorityNodes": { "minProperties": 1 },
-          "services": { "minProperties": 1 },
           "publicEdges": { "minItems": 1 }
-        }
+        },
+        "anyOf": [
+          { "properties": { "domains": { "minItems": 1 } } },
+          { "properties": { "services": { "minProperties": 1 } } }
+        ]
       }
     }
   ]

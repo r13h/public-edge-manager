@@ -1,13 +1,27 @@
 {{- if .Values.enabled }}
+{{- $services := deepCopy .Values.services -}}
+{{- $publicationRefs := deepCopy .Values.publication.refs -}}
+{{- range $domain := .Values.domains -}}
+{{- if hasKey $services $domain.hostname -}}
+{{- fail (printf "domain %q is configured in both domains and services" $domain.hostname) -}}
+{{- end -}}
+{{- $_ := set $services $domain.hostname (dict "service" $domain.service "class" $domain.class "probePath" $domain.probePath) -}}
+{{- with $domain.publicationRef -}}
+{{- if hasKey $publicationRefs $domain.service -}}
+{{- fail (printf "publication reference for service %q is configured more than once" $domain.service) -}}
+{{- end -}}
+{{- $_ := set $publicationRefs $domain.service (dict "namespace" .namespace "name" .name) -}}
+{{- end -}}
+{{- end -}}
 apiVersion: v1
 kind: ConfigMap
 metadata: {name: {{ include "public-edge-manager.name" . }}}
 data:
   NAMESERVERS: {{ join " " .Values.nameservers | quote }}
-  SERVICES_JSON: {{ .Values.services | toJson | quote }}
+  SERVICES_JSON: {{ $services | toJson | quote }}
   PUBLICATION_ENABLED: {{ .Values.publication.enabled | quote }}
   PUBLISHER_NODE: {{ .Values.publication.publisherNode | quote }}
-  PUBLICATION_REFS_JSON: {{ .Values.publication.refs | toJson | quote }}
+  PUBLICATION_REFS_JSON: {{ $publicationRefs | toJson | quote }}
 {{- $bind := dict -}}{{- $regions := dict -}}{{- $areas := dict -}}
 {{- range $node, $v := .Values.authorityNodes -}}
 {{- $_ := set $bind $node $v.bindAddress -}}{{- $_ := set $regions $node $v.region -}}{{- $_ := set $areas $node $v.area -}}
