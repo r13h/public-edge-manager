@@ -1,0 +1,46 @@
+# Safe s1 evaluation example. sslip.io resolves the embedded public IP without
+# changing production DNS. Replace the image with a reviewed, pullable build
+# before enabling the release.
+enabled: false
+
+nameservers:
+  - ns-public-edge.47-113-185-212.sslip.io.
+
+authorityNodes:
+  sj-aliyun:
+    bindAddress: 172.27.251.251
+    area: CN
+    region: guangzhou
+
+domains:
+  - hostname: headlamp.47-113-185-212.sslip.io.
+    service: headlamp
+    class: web
+    probePath: /
+  - hostname: public-edge.47-113-185-212.sslip.io.
+    service: public-edge
+    class: web
+    probePath: /healthz
+
+publicEdges:
+  - name: s1-aliyun
+    area: CN
+    region: guangzhou
+    nodeName: sj-aliyun
+    endpoint:
+      type: PublicIP
+      value: 47.113.185.212
+    gatewayVIP: 172.27.251.251
+    capacityMbps: 100
+    priority: 10
+    serviceClasses: [web]
+    forwarding:
+      mode: DirectGateway
+
+publication:
+  enabled: false
+
+workload:
+  hostNetwork: true
+  priorityClassName: ""
+  tolerations: []

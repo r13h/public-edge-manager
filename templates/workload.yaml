@@ -1,3 +1,4 @@
+{{- if .Values.enabled }}
 apiVersion: apps/v1
 kind: DaemonSet
 metadata: {name: {{ include "public-edge-manager.name" . }}}
@@ -8,9 +9,12 @@ spec:
     metadata: {labels: {app.kubernetes.io/name: {{ include "public-edge-manager.name" . }}}}
     spec:
       serviceAccountName: {{ include "public-edge-manager.name" . }}
-      hostNetwork: true
-      dnsPolicy: ClusterFirstWithHostNet
-      priorityClassName: system-node-critical
+      hostNetwork: {{ .Values.workload.hostNetwork }}
+      dnsPolicy: {{ ternary "ClusterFirstWithHostNet" "ClusterFirst" .Values.workload.hostNetwork }}
+      {{- with .Values.workload.priorityClassName }}
+      priorityClassName: {{ . }}
+      {{- end }}
+      {{- if .Values.authorityNodes }}
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -19,7 +23,10 @@ spec:
                   - key: kubernetes.io/hostname
                     operator: In
                     values: {{ keys .Values.authorityNodes | toJson }}
-      tolerations: [{operator: Exists}]
+      {{- end }}
+      {{- with .Values.workload.tolerations }}
+      tolerations: {{ . | toYaml | nindent 8 }}
+      {{- end }}
       containers:
         - name: manager
           image: {{ include "public-edge-manager.image" . }}
@@ -43,7 +50,19 @@ spec:
 ---
 apiVersion: v1
 kind: Service
-metadata: {name: {{ include "public-edge-manager.name" . }}}
+metadata:
+  name: {{ include "public-edge-manager.name" . }}
+  {{- with .Values.service.annotations }}
+  annotations: {{ . | toYaml | nindent 4 }}
+  {{- end }}
 spec:
+  type: {{ .Values.service.type }}
+  {{- if and (eq .Values.service.type "LoadBalancer") .Values.service.externalTrafficPolicy }}
+  externalTrafficPolicy: {{ .Values.service.externalTrafficPolicy }}
+  {{- end }}
   selector: {app.kubernetes.io/name: {{ include "public-edge-manager.name" . }}}
-  ports: [{name: http, port: 8080, targetPort: http}]
+  ports:
+    - {name: dns-udp, port: 53, targetPort: dns-udp, protocol: UDP}
+    - {name: dns-tcp, port: 53, targetPort: dns-tcp, protocol: TCP}
+    - {name: http, port: 8080, targetPort: http, protocol: TCP}
+{{- end }}

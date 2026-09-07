@@ -1,0 +1,22 @@
+enabled: true
+nameservers: [ns.example.com.]
+authorityNodes:
+  test-node: {bindAddress: 127.0.0.1, area: CN, region: test}
+services:
+  app.example.com.: {service: legacy, class: web, probePath: /}
+domains:
+  - hostname: app.example.com.
+    service: app
+    class: web
+    probePath: /
+publicEdges:
+  - name: test-edge
+    area: CN
+    region: test
+    nodeName: test-node
+    endpoint: {type: PublicIP, value: 127.0.0.1}
+    gatewayVIP: 127.0.0.1
+    capacityMbps: 1
+    priority: 1
+    serviceClasses: [web]
+    forwarding: {mode: DirectGateway}
